@@ -3,7 +3,8 @@
 Simulador interactivo de la fase final del Mundial 2026. Permite seleccionar los clasificados de cada grupo, elegir los mejores terceros y visualizar el cuadro de cruces de la etapa eliminatoria.
 
 ## 📸 Demo
-
+> Podés probarlo Aca ▶️ https://portu004.github.io/prediccion_mundial_2026/
+> o
 > Podés probarlo directamente abriendo el archivo `index.html` en tu navegador. No requiere servidor ni instalación.
 
 ---
