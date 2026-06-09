@@ -128,25 +128,68 @@ function initializeState() {
 function generateFullBracket() {
     const groups = state.groups;
     const qualifiedThirds = state.thirdPlaces.filter(tp => tp.qualified);
-    let teams = [];
     
-    Object.keys(groups).forEach(group => {
-        if (groups[group].position1) teams.push({ team: groups[group].position1, seed: `1${group}` });
-        if (groups[group].position2) teams.push({ team: groups[group].position2, seed: `2${group}` });
-    });
-    qualifiedThirds.forEach(tp => {
-        teams.push({ team: tp.team, seed: `3${tp.group}` });
-    });
+    // Función auxiliar para obtener el equipo según su posición y grupo
+    const getTeamBySeed = (seed) => {
+        const pos = seed.charAt(0);
+        const group = seed.slice(1);
+        if (pos === '1' && groups[group] && groups[group].position1) {
+            return { team: groups[group].position1, seed: seed };
+        }
+        if (pos === '2' && groups[group] && groups[group].position2) {
+            return { team: groups[group].position2, seed: seed };
+        }
+        return { team: 'TBD', seed: seed };
+    };
 
-    while (teams.length < 32) teams.push({ team: 'TBD', seed: 'TBD' });
+    // Plantilla de cruces EXACTA basada en el formato oficial FIFA 2026
+    const roundOf16Seeds = [
+        // === LADO IZQUIERDO DEL CUADRO (8 partidos) ===
+        { home: '1A', away: '3rd' }, // 1º A vs 3º
+        { home: '1C', away: '2F' },  // 1º C vs 2º F (Cruce fijo)
+        { home: '1E', away: '3rd' }, // 1º E vs 3º
+        { home: '2A', away: '2B' },  // 2º A vs 2º B
+        { home: '1G', away: '3rd' }, // 1º G vs 3º
+        { home: '1I', away: '3rd' }, // 1º I vs 3º
+        { home: '1K', away: '3rd' }, // 1º K vs 3º
+        { home: '2G', away: '2I' },  // 2º G vs 2º I
 
-    // Round of 16
+        // === LADO DERECHO DEL CUADRO (8 partidos) ===
+        { home: '1B', away: '3rd' }, // 1º B vs 3º
+        { home: '1F', away: '2C' },  // 1º F vs 2º C (Cruce fijo)
+        { home: '1D', away: '3rd' }, // 1º D vs 3º
+        { home: '2D', away: '2E' },  // 2º D vs 2º E
+        { home: '1H', away: '2J' },  // 1º H vs 2º J (Cruce fijo)
+        { home: '1J', away: '2H' },  // 1º J vs 2º H (Cruce fijo)
+        { home: '1L', away: '3rd' }, // 1º L vs 3º
+        { home: '2K', away: '2L' }   // 2º K vs 2º L
+    ];
+
     const roundOf16 = [];
+    let thirdPlaceIndex = 0;
+
     for (let i = 0; i < 16; i++) {
+        const matchSeeds = roundOf16Seeds[i];
+        let homeTeam = getTeamBySeed(matchSeeds.home);
+        let awayTeam;
+
+        // Asignación de los terceros clasificados
+        if (matchSeeds.away === '3rd') {
+            if (thirdPlaceIndex < qualifiedThirds.length) {
+                let tp = qualifiedThirds[thirdPlaceIndex];
+                awayTeam = { team: tp.team, seed: `3${tp.group}` };
+                thirdPlaceIndex++;
+            } else {
+                awayTeam = { team: 'TBD', seed: 'TBD' };
+            }
+        } else {
+            awayTeam = getTeamBySeed(matchSeeds.away);
+        }
+
         roundOf16.push({
             id: `r16-${i}`,
-            home: teams[i],
-            away: teams[i + 16] || { team: 'TBD', seed: 'TBD' },
+            home: homeTeam,
+            away: awayTeam,
             nextMatchId: `qf-${Math.floor(i / 2)}`,
             nextSlot: i % 2 === 0 ? 'home' : 'away'
         });
@@ -175,12 +218,12 @@ function generateFullBracket() {
             id: `sf-${i}`,
             home: resolveWinner(feedA),
             away: resolveWinner(feedB),
-            nextMatchId: `side-final-${Math.floor(i / 2)}`,  // ← Cambiado
+            nextMatchId: `side-final-${Math.floor(i / 2)}`,
             nextSlot: i % 2 === 0 ? 'home' : 'away'
         });
     }
 
-    // NUEVA: Side Finals (2 matches) — ganadores de sf-0 vs sf-1, y sf-2 vs sf-3
+    // Side Finals (2 matches) — ganadores de sf-0 vs sf-1, y sf-2 vs sf-3
     const sideFinals = [];
     for (let i = 0; i < 2; i++) {
         const feedA = semiFinals[i * 2];
